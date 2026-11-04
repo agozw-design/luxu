@@ -1,4 +1,4 @@
-// Source-faithful SVG scenes keep Illustrator geometry, illustrations and outlined typography.
+// Source-faithful SVG scenes keep Illustrator geometry, illustrations and original typography.
 // Navigation, timelines, dialogs and mobile scrolling are native HTML/JS.
 const app=document.querySelector('#app'),picker=document.querySelector('#picker');
 const parsedScenes=new Map();
@@ -6,7 +6,7 @@ const cache=new Map();let serial=0,run=0,raf=0,chatId=1,toastTimer;
 const still=new URLSearchParams(location.search).get('still')==='1';
 const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
 const asset=name=>`assets/${name}`;
-async function get(name){if(!cache.has(name))cache.set(name,fetch(asset(name)).then(r=>{if(!r.ok)throw Error(`素材加载失败：${name}`);return r.text()}).catch(e=>{cache.delete(name);throw e}));return cache.get(name)}
+async function get(name){if(!cache.has(name))cache.set(name,fetch(asset(name)+'?v=20261104-text1').then(r=>{if(!r.ok)throw Error(`素材加载失败：${name}`);return r.text()}).catch(e=>{cache.delete(name);throw e}));return cache.get(name)}
 const chats=JSON.parse(await get('chats.json')),transcripts=JSON.parse(await get('transcripts.json'));
 function svg(text,viewBox){let template=parsedScenes.get(text);if(!template){const doc=new DOMParser().parseFromString(text,'image/svg+xml');if(doc.querySelector('parsererror'))throw Error('设计素材解析失败');template=doc.documentElement;parsedScenes.set(text,template)}const root=template.cloneNode(true),prefix=`s${serial++}-`;root.querySelectorAll('[id]').forEach(n=>n.id=prefix+n.id);root.querySelectorAll('*').forEach(n=>{for(const a of [...n.attributes]){let v=a.value.replace(/url\(#([^)]*)\)/g,(_,id)=>`url(#${prefix}${id})`);if((a.localName==='href')&&v.startsWith('#'))v='#'+prefix+v.slice(1);if(v!==a.value)n.setAttributeNS(a.namespaceURI,a.name,v)}});root.removeAttribute('width');root.removeAttribute('height');if(viewBox)root.setAttribute('viewBox',viewBox);root.setAttribute('aria-hidden','true');root.setAttribute('focusable','false');return document.importNode(root,true)}
 let passFresh=true;
@@ -65,7 +65,9 @@ function moments(body){
  }
  update();
 }
-async function chat(id,token){chatId=Number(id);if(!chats.some(c=>c.id===chatId))chatId=1;const name=`chat-${chatId}`,source=await get(name+'.svg');if(token!==run)return;const body=readingShell(source,812,name,true),art=body.querySelector('svg');
+let chatFontsReady;
+function loadChatFonts(){return chatFontsReady??=(get('chat-fonts.json').then(JSON.parse).then(names=>Promise.all(names.map(name=>document.fonts.load('12px '+name)))).catch(e=>{chatFontsReady=null;throw e}))}
+async function chat(id,token){chatId=Number(id);if(!chats.some(c=>c.id===chatId))chatId=1;const name=`chat-${chatId}`,[source]=await Promise.all([get(name+'.svg'),loadChatFonts()]);if(token!==run)return;const body=readingShell(source,812,name,true),art=body.querySelector('svg');
  const groups=[...art.querySelectorAll('[data-at]')];let bottom=56;const bounds=new Map(groups.map(g=>[g,g.getBBox()]));
  const show=t=>{const follow=body.scrollHeight-body.clientHeight-body.scrollTop<32;let changed=false;for(const g of groups){if(+g.dataset.at<=t&&!g.classList.contains('shown')){g.classList.add('shown');for(const image of g.querySelectorAll('[data-sticker]'))image.setAttributeNS('http://www.w3.org/1999/xlink','href',`assets/sticker-${image.dataset.sticker}.webp`);const box=bounds.get(g);bottom=Math.max(bottom,box.y+box.height+16);changed=true}}if(changed){art.setAttribute('viewBox',`0 56 375 ${Math.max(1,bottom-56)}`);if(follow)body.scrollTop=body.scrollHeight}};
  if(still){show(Infinity);body.scrollTop=0}else animation(chats[chatId-1].duration,show)}
