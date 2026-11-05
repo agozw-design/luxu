@@ -6,7 +6,7 @@ const cache=new Map();let serial=0,run=0,raf=0,chatId=1,toastTimer;
 const still=new URLSearchParams(location.search).get('still')==='1';
 const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
 const asset=name=>`assets/${name}`;
-async function get(name){if(!cache.has(name))cache.set(name,fetch(asset(name)+'?v=20261104-text2').then(r=>{if(!r.ok)throw Error(`素材加载失败：${name}`);return r.text()}).catch(e=>{cache.delete(name);throw e}));return cache.get(name)}
+async function get(name){if(!cache.has(name))cache.set(name,fetch(asset(name)+'?v=20261105-seal1').then(r=>{if(!r.ok)throw Error(`素材加载失败：${name}`);return r.text()}).catch(e=>{cache.delete(name);throw e}));return cache.get(name)}
 const chats=JSON.parse(await get('chats.json')),transcripts=JSON.parse(await get('transcripts.json')),fontConfig=JSON.parse(await get('scene-fonts.json'));
 const fontLoads=new Map();
 function loadFonts(name){return Promise.all(fontConfig.scenes[name].map(family=>{if(!fontLoads.has(family))fontLoads.set(family,document.fonts.load('12px '+family).then(faces=>{if(!faces.length)throw Error('字体未注册：'+family)}).catch(e=>{fontLoads.delete(family);throw e}));return fontLoads.get(family)}))}
